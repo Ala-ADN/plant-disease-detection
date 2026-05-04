@@ -80,9 +80,13 @@ jobs:
 
           cd /tmp/hf-space
 
-          # Track the Keras model with Git LFS (~38 MB exceeds HF's 10 MB
-          # non-LFS limit). Idempotent: re-running just no-ops the entries.
+          # HF rejects raw binaries — route the model and sample images
+          # through Git LFS / Xet. Idempotent: re-running no-ops entries.
           git lfs track "*.h5"
+          git lfs track "*.png"
+          git lfs track "*.jpg"
+          git lfs track "*.jpeg"
+          git lfs track "*.webp"
           git add .gitattributes
 
           git add -A
