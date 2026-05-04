@@ -95,4 +95,6 @@ jobs:
             exit 0
           fi
           git commit -m "Sync from GitHub: ${GITHUB_SHA::7}"
-          git push origin HEAD:master
+          # HF Spaces' default (and built) branch is `main`, regardless of
+          # what this GitHub repo calls its primary branch.
+          git push origin HEAD:main
