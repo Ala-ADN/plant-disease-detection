@@ -2,7 +2,7 @@ name: Deploy to Hugging Face Spaces
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -91,4 +91,4 @@ jobs:
             exit 0
           fi
           git commit -m "Sync from GitHub: ${GITHUB_SHA::7}"
-          git push origin HEAD:main
+          git push origin HEAD:master
