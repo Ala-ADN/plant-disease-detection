@@ -1,0 +1,94 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-space-deploy
+  cancel-in-progress: false
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Sync working tree to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ vars.HF_USERNAME }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_USERNAME" ] || [ -z "$HF_SPACE" ]; then
+            echo "::error::Missing one of: HF_TOKEN (secret), HF_USERNAME (var), HF_SPACE (var)"
+            exit 1
+          fi
+
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          SPACE_URL="https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${HF_SPACE}"
+
+          # Clone the Space's existing history into a sibling dir
+          GIT_LFS_SKIP_SMUDGE=1 git clone "$SPACE_URL" /tmp/hf-space
+
+          # Mirror the current working tree onto the Space (no GitHub git
+          # history → no historical binaries leaking through). We exclude:
+          #  - .git/ .github/ .venv/ caches → not needed on the Space
+          #  - src/ main.py .python-version → uv project scaffolding
+          #  - README.md → replaced by space.md below
+          #  - space.md → promoted to README below
+          #  - space-requirements.txt → promoted to requirements.txt below
+          #  - pyproject.toml / uv.lock → HF uses requirements.txt; the
+          #    transitive pins from `uv export` conflict with HF's
+          #    auto-added gradio[oauth,mcp] extra (mcp pins pydantic<=2.12.5)
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.venv/' \
+            --exclude='__pycache__/' \
+            --exclude='*.pyc' \
+            --exclude='.pytest_cache/' \
+            --exclude='.python-version' \
+            --exclude='src/' \
+            --exclude='main.py' \
+            --exclude='README.md' \
+            --exclude='space.md' \
+            --exclude='space-requirements.txt' \
+            --exclude='pyproject.toml' \
+            --exclude='uv.lock' \
+            ./ /tmp/hf-space/
+
+          # space.md → README.md (carries HF Space YAML metadata)
+          cp space.md /tmp/hf-space/README.md
+
+          # space-requirements.txt → requirements.txt (loose top-level deps;
+          # HF's pip resolver fills in compatible transitive versions)
+          cp space-requirements.txt /tmp/hf-space/requirements.txt
+
+          cd /tmp/hf-space
+
+          # Track the Keras model with Git LFS (~38 MB exceeds HF's 10 MB
+          # non-LFS limit). Idempotent: re-running just no-ops the entries.
+          git lfs track "*.h5"
+          git add .gitattributes
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to deploy."
+            exit 0
+          fi
+          git commit -m "Sync from GitHub: ${GITHUB_SHA::7}"
+          git push origin HEAD:main

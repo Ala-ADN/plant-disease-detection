@@ -1,0 +1,5 @@
+gradio>=5.0
+tensorflow-cpu>=2.18
+pillow>=10.0
+numpy>=1.26
+opencv-python-headless>=4.10
