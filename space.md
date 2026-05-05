@@ -3,7 +3,7 @@ title: Plant Disease Detection
 colorFrom: green
 colorTo: yellow
 sdk: gradio
-sdk_version: 5.0.0
+sdk_version: 5.16.0
 app_file: web/app.py
 pinned: false
 license: mit
