@@ -64,7 +64,7 @@ def detect_blobs(rgb: np.ndarray) -> np.ndarray:
         cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
     )
 
-
+#asba
 def process(image: Image.Image):
     if image is None:
         return None, None, None, {}

@@ -1,7 +1,5 @@
 gradio>=5.16
-huggingface_hub<1.0
 tensorflow-cpu>=2.18
 pillow>=10.0
 numpy>=1.26
 opencv-python-headless>=4.10
-audioop-lts; python_version >= "3.13"
